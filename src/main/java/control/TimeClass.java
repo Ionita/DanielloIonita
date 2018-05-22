@@ -1,4 +1,4 @@
-package main.java.control;
+package control;
 
 import java.io.*;
 import java.util.Date;
@@ -23,7 +23,7 @@ public class TimeClass {
         System.out.println("\n\n\n extimated time spent: " + String.valueOf(time));
         FileWriter pw = null;
         try {
-            pw = new FileWriter(new File("results/" + filename), true);
+            pw = new FileWriter(new File(filename), true);
             String sb = String.valueOf(time) +
                     '\n';
 
