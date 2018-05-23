@@ -2,14 +2,11 @@ package control;
 
 import entities.SorterClass;
 import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
-import org.apache.spark.api.java.function.PairFunction;
-import scala.Tuple2;
 
-import java.io.File;
+import javax.security.auth.login.Configuration;
 import java.util.concurrent.TimeUnit;
 
 public class SparkWorker {
@@ -31,6 +28,9 @@ public class SparkWorker {
      */
     public void initSparkContext(String appname, String mastername){
         SparkConf conf = new SparkConf().setMaster(mastername).setAppName(appname);
+        conf.set("fs.hdfs.impl", org.apache.hadoop.hdfs.DistributedFileSystem.class.getName());
+        conf.set("fs.file.impl", org.apache.hadoop.fs.LocalFileSystem.class.getName());
+
         sc = new JavaSparkContext(conf);
     }
 
@@ -41,6 +41,7 @@ public class SparkWorker {
      * @return
      */
     public JavaRDD<SorterClass> parseFile(String filepath){
+
         return sc.textFile(filepath).map(
                 (Function<String, SorterClass>) line -> {
                     String[] fields = line.split(",");

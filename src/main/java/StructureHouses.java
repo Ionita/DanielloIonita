@@ -15,6 +15,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Calendar;
 
+import org.apache.hadoop.fs.FileSystem;
+
 
 public class StructureHouses {
 
@@ -22,6 +24,7 @@ public class StructureHouses {
     private static String INPUT_DIRECTORY;
 
     public static void main(String[] args){
+
         Logger.getLogger("org").setLevel(Level.OFF);
         Logger.getLogger("akka").setLevel(Level.OFF);
 
@@ -54,7 +57,8 @@ public class StructureHouses {
     private static void query1(){
         TimeClass.getInstance().start();
 //        SparkWorker.getInstance().initSparkContext("query1", "local[*]");
-        JavaRDD<SorterClass> data = SparkWorker.getInstance().parseFile(INPUT_DIRECTORY);
+        //JavaRDD<SorterClass> data = SparkWorker.getInstance().parseFile(INPUT_DIRECTORY);
+        JavaRDD<SorterClass> data = SparkWorker.getInstance().parseFile("hdfs://master:54310/deleteDirectory/d14_filtered.csv");
         data
                 .filter(x-> x.isProperty() == 1)    //getting only tuples with instant values
                 .mapToPair(x -> new Tuple2<>(new Tuple2<>(x.getHouseid(), x.getTimestamp()), x.getValue()))
