@@ -1,0 +1,5 @@
+ bin/spark-submit --class "runner.StructureHouses" --master "local" SABDanielloIonita.jar aaa /home/simone/IdeaProjects/DanielloIonita/results
+
+bin/spark-submit --class "runner.StructureHouses" --master "local" SABDanielloIonita.jar hdfs://localhost:9000/dd/d14_filtered.csv hdfs://localhost:9000/results
+
+
