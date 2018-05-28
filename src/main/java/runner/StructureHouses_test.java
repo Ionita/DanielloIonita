@@ -6,7 +6,7 @@ import org.apache.log4j.Logger;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import scala.Tuple2;
-import control.TimeClass;
+import control.TimeClass_test;
 import entities.SorterClass;
 import scala.Tuple3;
 import scala.Tuple4;
@@ -17,7 +17,7 @@ import java.io.IOException;
 import java.util.Calendar;
 
 
-public class StructureHouses {
+public class StructureHouses_test {
 
     private static String OUTPUT_DIRECTORY;
     private static String INPUT_DIRECTORY;
@@ -34,17 +34,32 @@ public class StructureHouses {
         OUTPUT_DIRECTORY = args[1];
         INPUT_DIRECTORY = args[0];
 
-        SparkWorker.getInstance().initSparkContext("SABDanielloIonita", "local");
 
-        query1();
-        query2();
-        query3();
+        createFileIfItExists(OUTPUT_DIRECTORY + "/query1results.csv");
+        createFileIfItExists(OUTPUT_DIRECTORY + "/query2results.csv");
+        createFileIfItExists(OUTPUT_DIRECTORY + "/query3results.csv");
+
+        SparkWorker.getInstance().initSparkContext("SABD", "local");
+
+        for(int i = 0; i < 50; i++) {
+            deleteFileIfItExists(OUTPUT_DIRECTORY + "/query1output");
+            query1();
+        }
+        for(int i = 0; i < 50; i++) {
+            deleteFileIfItExists(OUTPUT_DIRECTORY + "/query2mean");
+            deleteFileIfItExists(OUTPUT_DIRECTORY + "/query2standardDeviation");
+            query2();
+        }
+        for(int i = 0; i < 50; i++) {
+            deleteFileIfItExists(OUTPUT_DIRECTORY + "/query3");
+            query3();
+        }
 
         SparkWorker.getInstance().closeConnection();
     }
 
     private static void query1(){
-        TimeClass.getInstance().start();
+        TimeClass_test.getInstance().start();
         JavaRDD<SorterClass> data = SparkWorker.getInstance().parseFile(INPUT_DIRECTORY);
         data
                 .filter(x-> x.isProperty() == 1)    //getting only tuples with instant values
@@ -55,41 +70,41 @@ public class StructureHouses {
                 .reduceByKey(Math::max)
                 .saveAsTextFile(OUTPUT_DIRECTORY + "/query1output");
 
-        TimeClass.getInstance().stop();
+        TimeClass_test.getInstance().stop(OUTPUT_DIRECTORY + "/query1results.csv");
 
     }
 
     private static void query2(){
-        TimeClass.getInstance().start();
+        TimeClass_test.getInstance().start();
         JavaRDD<SorterClass> data = SparkWorker.getInstance().parseFile(INPUT_DIRECTORY);
 
         JavaRDD<SorterClass> dataFiltered = data.filter(x -> x.isProperty() == 0);
 
         JavaPairRDD<Tuple3<Integer, Integer, Integer>, Double> plugsStarterValue = dataFiltered
-                        .mapToPair(x -> new Tuple2<>(new Tuple4<>(x.getHouseid(), x.getPlugid(), x.getTimezone(), x.getDay()), new Tuple2<>(x.getValue(), x.getTimestamp())))
-                        .reduceByKey((x, y) -> {
-                            if(x._2() < y._2())
-                                return x;
-                            else
-                                return y;
-                        })
-                        .mapToPair(x -> new Tuple2<>(new Tuple3<>(x._1._1(), x._1._3(), x._1._4()), x._2._1()))
-                        .reduceByKey((x , y) -> x+y);
+                .mapToPair(x -> new Tuple2<>(new Tuple4<>(x.getHouseid(), x.getPlugid(), x.getTimezone(), x.getDay()), new Tuple2<>(x.getValue(), x.getTimestamp())))
+                .reduceByKey((x, y) -> {
+                    if(x._2() < y._2())
+                        return x;
+                    else
+                        return y;
+                })
+                .mapToPair(x -> new Tuple2<>(new Tuple3<>(x._1._1(), x._1._3(), x._1._4()), x._2._1()))
+                .reduceByKey((x , y) -> x+y);
 
         JavaPairRDD<Tuple3<Integer, Integer, Integer>, Double> plugsFinalValues = dataFiltered
-                    .mapToPair(x -> new Tuple2<>(new Tuple4<>(x.getHouseid(), x.getPlugid(), x.getTimezone(), x.getDay()), new Tuple2<>(x.getValue(), x.getTimestamp())))
-                    .reduceByKey((x, y) -> {
-                        if(x._2() > y._2())
-                            return x;
-                        else
-                            return y;
-                    })
-                    .mapToPair(x -> new Tuple2<>(new Tuple3<>(x._1._1(), x._1._3(), x._1._4()), x._2._1()))
-                    .reduceByKey((x , y) -> x+y);
+                .mapToPair(x -> new Tuple2<>(new Tuple4<>(x.getHouseid(), x.getPlugid(), x.getTimezone(), x.getDay()), new Tuple2<>(x.getValue(), x.getTimestamp())))
+                .reduceByKey((x, y) -> {
+                    if(x._2() > y._2())
+                        return x;
+                    else
+                        return y;
+                })
+                .mapToPair(x -> new Tuple2<>(new Tuple3<>(x._1._1(), x._1._3(), x._1._4()), x._2._1()))
+                .reduceByKey((x , y) -> x+y);
 
         JavaPairRDD<Tuple3<Integer, Integer, Integer>, Double> dailyvalue =
                 plugsFinalValues.join(plugsStarterValue)
-                .mapToPair(x -> new Tuple2<>(new Tuple3<>(x._1._1(), x._1._2(), x._1._3()), Math.max(x._2._1 - x._2._2, 0.0)));
+                        .mapToPair(x -> new Tuple2<>(new Tuple3<>(x._1._1(), x._1._2(), x._1._3()), Math.max(x._2._1 - x._2._2, 0.0)));
 //                .mapToPair(x -> new Tuple2<>(new Tuple3<>(x._1._1(), x._1._2(), x._1._3()), x._2._1 - x._2._2));
 
         JavaPairRDD<Tuple2<Integer, Integer>, Double> averageThroughDays=
@@ -109,48 +124,48 @@ public class StructureHouses {
         averageThroughDays.saveAsTextFile(OUTPUT_DIRECTORY + "/query2mean");
         standardDeviation.saveAsTextFile(OUTPUT_DIRECTORY + "/query2standardDeviation");
 
-        TimeClass.getInstance().stop();
+        TimeClass_test.getInstance().stop(OUTPUT_DIRECTORY + "/query2results.csv");
     }
 
     private static void query3(){
 
 
-        TimeClass.getInstance().start();
+        TimeClass_test.getInstance().start();
         JavaRDD<SorterClass> data = SparkWorker.getInstance().parseFile(INPUT_DIRECTORY);
 
         JavaRDD<SorterClass> dataFiltered = data.filter(x -> x.isProperty() == 0);
 
         JavaPairRDD<Tuple5
                 <
-                Integer/*house_id*/,
-                Integer/*plug_id*/,
-                Integer/*timezone*/,
-                Integer/*day*/,
-                Integer/*daytype*/
-                >,
+                        Integer/*house_id*/,
+                        Integer/*plug_id*/,
+                        Integer/*timezone*/,
+                        Integer/*day*/,
+                        Integer/*daytype*/
+                        >,
                 Double> plugsStarterValue =
-            dataFiltered
-                .mapToPair(StructureHouses::calculateDay)
-                .reduceByKey((x, y) -> {
-                    if(x._2() < y._2())
-                        return x;
-                    else
-                        return y;
-                })
-                .mapToPair(x -> new Tuple2<>(new Tuple5<>(x._1._1(), x._1._2(), x._1._3(), x._1._4(), x._1._5()), x._2._1()));
+                dataFiltered
+                        .mapToPair(StructureHouses_test::calculateDay)
+                        .reduceByKey((x, y) -> {
+                            if(x._2() < y._2())
+                                return x;
+                            else
+                                return y;
+                        })
+                        .mapToPair(x -> new Tuple2<>(new Tuple5<>(x._1._1(), x._1._2(), x._1._3(), x._1._4(), x._1._5()), x._2._1()));
 
 
         JavaPairRDD<Tuple5
                 <
-                Integer/*house_id*/,
-                Integer/*plug_id*/,
-                Integer/*timezone*/,
-                Integer/*day*/,
-                Integer/*daytype*/
-                >,
+                        Integer/*house_id*/,
+                        Integer/*plug_id*/,
+                        Integer/*timezone*/,
+                        Integer/*day*/,
+                        Integer/*daytype*/
+                        >,
                 Double> plugsFinalValues =
                 dataFiltered
-                        .mapToPair(StructureHouses::calculateDay)
+                        .mapToPair(StructureHouses_test::calculateDay)
                         .reduceByKey((x, y) -> {
                             if(x._2() > y._2()) {
                                 return x;
@@ -163,16 +178,16 @@ public class StructureHouses {
 
         JavaPairRDD<Tuple5
                 <
-                Integer/*house_id*/,
-                Integer/*plug_id*/,
-                Integer/*timezone*/,
-                Integer/*day*/,
-                Integer/*daytype*/
-                >, Double> dailyvalue =
+                        Integer/*house_id*/,
+                        Integer/*plug_id*/,
+                        Integer/*timezone*/,
+                        Integer/*day*/,
+                        Integer/*daytype*/
+                        >, Double> dailyvalue =
                 plugsFinalValues.join(plugsStarterValue)
                         .mapToPair(x -> new Tuple2<>(new Tuple5<>(x._1._1(), x._1._2(), x._1._3(), x._1._4(), x._1._5()), Math.max(x._2._1 - x._2._2, 0.0)));
 
-                //dailyvalue.foreach(x -> System.out.println(x._1));
+        //dailyvalue.foreach(x -> System.out.println(x._1));
 
         JavaPairRDD<Tuple2<Integer, Integer>, Double> averageTopTime =
                 dailyvalue
@@ -197,10 +212,38 @@ public class StructureHouses {
 
         sorting.saveAsTextFile(OUTPUT_DIRECTORY + "/query3");
 
-        TimeClass.getInstance().stop();
+        TimeClass_test.getInstance().stop(OUTPUT_DIRECTORY + "/query3results.csv");
 
 
 
+    }
+
+    private static Boolean deleteFileIfItExists(String filepath){
+        File directory = new File(filepath);
+        if(directory.exists()){
+            String[] entries = directory.list();
+            assert entries != null;
+            for(String s: entries){
+                File currentFile = new File(directory.getPath(),s);
+                if(!currentFile.delete())
+                    return false;
+            }
+            return !directory.delete();
+        }
+        return true;
+    }
+
+    private static Boolean createFileIfItExists(String filepath){
+        File directory = new File(filepath);
+        if(!directory.exists()) {
+            try {
+                return directory.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+                return false;
+            }
+        }
+        return true;
     }
 
     private static Tuple2<Tuple5<Integer, Integer, Integer, Integer, Integer>, Tuple2<Double, Integer>> calculateDay(SorterClass x) {
