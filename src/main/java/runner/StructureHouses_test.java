@@ -1,12 +1,11 @@
 package runner;
 
-import control.SparkWorker;
+import control.*;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import scala.Tuple2;
-import control.TimeClass_test;
 import entities.SorterClass;
 import scala.Tuple3;
 import scala.Tuple4;
@@ -41,99 +40,88 @@ public class StructureHouses_test {
 
         SparkWorker.getInstance().initSparkContext("SABD", "local[*]");
 
-        for(int i = 0; i < 50; i++) {
+        for(int i = 0; i < 1; i++) {
             deleteFileIfItExists(OUTPUT_DIRECTORY + "/query1output");
             query1();
         }
-        for(int i = 0; i < 50; i++) {
-            deleteFileIfItExists(OUTPUT_DIRECTORY + "/query2mean");
-            deleteFileIfItExists(OUTPUT_DIRECTORY + "/query2standardDeviation");
-            query2();
-        }
-        for(int i = 0; i < 50; i++) {
-            deleteFileIfItExists(OUTPUT_DIRECTORY + "/query3");
-            query3();
-        }
+//        for(int i = 0; i < 1; i++) {
+//            deleteFileIfItExists(OUTPUT_DIRECTORY + "/query2mean");
+//            deleteFileIfItExists(OUTPUT_DIRECTORY + "/query2standardDeviation");
+//            query2();
+//        }
+//        for(int i = 0; i < 1; i++) {
+//            deleteFileIfItExists(OUTPUT_DIRECTORY + "/query3");
+//            query3();
+//        }
 
         SparkWorker.getInstance().closeConnection();
     }
 
-    private static void query1(){
-        TimeClass_test.getInstance().start();
+    private static void query1() {
+        TimeClass.getInstance().start();
+
         JavaRDD<SorterClass> data = SparkWorker.getInstance().parseFile(INPUT_DIRECTORY);
+
         data
-                .filter(x-> x.isProperty() == 1)    //getting only tuples with instant values
+                .filter(x -> x.isProperty() == 1)        //getting only tuples with instant values
+                .mapToPair(x -> new Tuple2<>(x.getHouseid(), x.getValue()))
+                .reduceByKey((x, y) -> x+y)
+
+                .foreach(x -> {
+                    if(x._1 == 5)
+                    System.out.println(x);
+                });
+
+        data
+                .filter(x -> x.isProperty() == 1)        //getting only tuples with instant values
                 .mapToPair(x -> new Tuple2<>(new Tuple2<>(x.getHouseid(), x.getTimestamp()), x.getValue()))
-                .reduceByKey((x,y) -> x+y)          //sum of the plugs with the same timestamp and house_id
-                .filter(x -> x._2 >= 350)           //filter by instant value greater then 350
+                .reduceByKey((x, y) -> x + y)              //sum of the plugs with the same timestamp and house_id
+                .filter(x -> x._2 >= 350)               //filter by instant value greater then 350
                 .mapToPair(x -> new Tuple2<>(x._1._1, x._2))              //grouping by house_id
-                .reduceByKey(Math::max)
+                .reduceByKey((x, y) -> {
+                    if (x>y){
+                        System.out.println(x);
+                        return x;
+                    }
+                    else
+                        return y;
+                })
                 .saveAsTextFile(OUTPUT_DIRECTORY + "/query1output");
 
-        TimeClass_test.getInstance().stop(OUTPUT_DIRECTORY + "/query1results.csv");
+        TimeClass.getInstance().stop();
 
     }
 
-    private static void query2(){
-        TimeClass_test.getInstance().start();
+    private static void query2() {
+        TimeClass.getInstance().start();
+        Query2_functions q2 = Query2_functions.getInstance();
+
         JavaRDD<SorterClass> data = SparkWorker.getInstance().parseFile(INPUT_DIRECTORY);
 
-        JavaRDD<SorterClass> dataFiltered = data.filter(x -> x.isProperty() == 0);
+        JavaRDD<SorterClass> dataFiltered = data.filter(x -> x.isProperty() == 0);  //taking total value energy
 
-        JavaPairRDD<Tuple3<Integer, Integer, Integer>, Double> plugsStarterValue = dataFiltered
-                .mapToPair(x -> new Tuple2<>(new Tuple4<>(x.getHouseid(), x.getPlugid(), x.getTimezone(), x.getDay()), new Tuple2<>(x.getValue(), x.getTimestamp())))
-                .reduceByKey((x, y) -> {
-                    if(x._2() < y._2())
-                        return x;
-                    else
-                        return y;
-                })
-                .mapToPair(x -> new Tuple2<>(new Tuple3<>(x._1._1(), x._1._3(), x._1._4()), x._2._1()))
-                .reduceByKey((x , y) -> x+y);
+        JavaPairRDD<Tuple3<Integer, Integer, Integer>, Double> plugsStarterValue = q2.q2_getPlugsMinTimestampValue(dataFiltered);
+        JavaPairRDD<Tuple3<Integer, Integer, Integer>, Double> plugsFinalValues = q2.q2_getPlugsMaxTimestampValue(dataFiltered);
 
-        JavaPairRDD<Tuple3<Integer, Integer, Integer>, Double> plugsFinalValues = dataFiltered
-                .mapToPair(x -> new Tuple2<>(new Tuple4<>(x.getHouseid(), x.getPlugid(), x.getTimezone(), x.getDay()), new Tuple2<>(x.getValue(), x.getTimestamp())))
-                .reduceByKey((x, y) -> {
-                    if(x._2() > y._2())
-                        return x;
-                    else
-                        return y;
-                })
-                .mapToPair(x -> new Tuple2<>(new Tuple3<>(x._1._1(), x._1._3(), x._1._4()), x._2._1()))
-                .reduceByKey((x , y) -> x+y);
+        JavaPairRDD<Tuple3<Integer, Integer, Integer>, Double> dailyValues = q2.q2_getDailyValue(plugsStarterValue, plugsFinalValues);
 
-        JavaPairRDD<Tuple3<Integer, Integer, Integer>, Double> dailyvalue =
-                plugsFinalValues.join(plugsStarterValue)
-                        .mapToPair(x -> new Tuple2<>(new Tuple3<>(x._1._1(), x._1._2(), x._1._3()), Math.max(x._2._1 - x._2._2, 0.0)));
-//                .mapToPair(x -> new Tuple2<>(new Tuple3<>(x._1._1(), x._1._2(), x._1._3()), x._2._1 - x._2._2));
-
-        JavaPairRDD<Tuple2<Integer, Integer>, Double> averageThroughDays=
-                dailyvalue
-                        .mapToPair(x -> new Tuple2<>(new Tuple2<>(x._1._1(), x._1._2()), new Tuple2<>(x._2, 1)))
-                        .reduceByKey((x, y) -> new Tuple2<>(x._1 + y._1, x._2 + y._2))
-                        .mapToPair(x -> new Tuple2<>(new Tuple2<>(x._1._1(), x._1._2()), x._2._1/x._2._2));
-
-        JavaPairRDD<Tuple2<Integer, Integer>, Double> standardDeviation =
-                dailyvalue
-                        .mapToPair(x -> new Tuple2<>(new Tuple2<>(x._1._1(), x._1._2()), new Tuple2<>(x._2, x._1._3())))
-                        .join(averageThroughDays)
-                        .mapToPair(x -> new Tuple2<>(new Tuple2<>(x._1._1, x._1._2), new Tuple2<>(Math.pow(x._2._1._1 - x._2._2, 2),  1.0)))
-                        .reduceByKey((x, y) -> new Tuple2<>(x._1 + y._1, x._2 + y._2))
-                        .mapToPair(x -> new Tuple2<>(new Tuple2<>(x._1._1, x._1._2), Math.sqrt(x._2._1/(x._2._2-1.0))));
+        JavaPairRDD<Tuple2<Integer, Integer>, Double> averageThroughDays = q2.q2_computeAverage(dailyValues);
+        JavaPairRDD<Tuple2<Integer, Integer>, Double> standardDeviation = q2.q2_computeStandardDeviation(dailyValues, averageThroughDays);
 
         averageThroughDays.saveAsTextFile(OUTPUT_DIRECTORY + "/query2mean");
         standardDeviation.saveAsTextFile(OUTPUT_DIRECTORY + "/query2standardDeviation");
 
-        TimeClass_test.getInstance().stop(OUTPUT_DIRECTORY + "/query2results.csv");
+        TimeClass.getInstance().stop();
     }
 
-    private static void query3(){
+    private static void query3() {
 
+        TimeClass.getInstance().start();
 
-        TimeClass_test.getInstance().start();
-        JavaRDD<SorterClass> data = SparkWorker.getInstance().parseFile(INPUT_DIRECTORY);
+        Query3_functions q3 = Query3_functions.getInstance();
+        JavaRDD<SorterClass> data = SparkWorker.getInstance().parseFile(INPUT_DIRECTORY);   //dataset parsing from input directory
 
-        JavaRDD<SorterClass> dataFiltered = data.filter(x -> x.isProperty() == 0);
+        JavaRDD<SorterClass> dataFiltered = data.filter(x -> x.isProperty() == 0);  //taking total value energy
 
         JavaPairRDD<Tuple5
                 <
@@ -143,16 +131,7 @@ public class StructureHouses_test {
                         Integer/*day*/,
                         Integer/*daytype*/
                         >,
-                Double> plugsStarterValue =
-                dataFiltered
-                        .mapToPair(StructureHouses_test::calculateDay)
-                        .reduceByKey((x, y) -> {
-                            if(x._2() < y._2())
-                                return x;
-                            else
-                                return y;
-                        })
-                        .mapToPair(x -> new Tuple2<>(new Tuple5<>(x._1._1(), x._1._2(), x._1._3(), x._1._4(), x._1._5()), x._2._1()));
+                Double> plugsStarterValue = q3.q3_getPlugStarterValue(dataFiltered);
 
 
         JavaPairRDD<Tuple5
@@ -163,18 +142,8 @@ public class StructureHouses_test {
                         Integer/*day*/,
                         Integer/*daytype*/
                         >,
-                Double> plugsFinalValues =
-                dataFiltered
-                        .mapToPair(StructureHouses_test::calculateDay)
-                        .reduceByKey((x, y) -> {
-                            if(x._2() > y._2()) {
-                                return x;
-                            }
-                            else {
-                                return y;
-                            }
-                        })
-                        .mapToPair(x -> new Tuple2<>(new Tuple5<>(x._1._1(), x._1._2(), x._1._3(), x._1._4(), x._1._5()), x._2._1()));
+                Double> plugsFinalValues = q3.q3_getPlugFinalValue(dataFiltered);
+
 
         JavaPairRDD<Tuple5
                 <
@@ -183,37 +152,18 @@ public class StructureHouses_test {
                         Integer/*timezone*/,
                         Integer/*day*/,
                         Integer/*daytype*/
-                        >, Double> dailyvalue =
-                plugsFinalValues.join(plugsStarterValue)
-                        .mapToPair(x -> new Tuple2<>(new Tuple5<>(x._1._1(), x._1._2(), x._1._3(), x._1._4(), x._1._5()), Math.max(x._2._1 - x._2._2, 0.0)));
+                        >, Double> dailyvalue = q3.q3_getDailyValue(plugsStarterValue, plugsFinalValues);
 
-        //dailyvalue.foreach(x -> System.out.println(x._1));
 
-        JavaPairRDD<Tuple2<Integer, Integer>, Double> averageTopTime =
-                dailyvalue
-                        .filter(x -> x._1._5() == 1)
-                        .mapToPair(x -> new Tuple2<>(new Tuple2<>(x._1._1(), x._1._2()), new Tuple2<>(x._2, 1)))
-                        .reduceByKey((x, y) -> new Tuple2<>(x._1 + y._1, x._2 + y._2))
-                        .mapToPair(x -> new Tuple2<>(new Tuple2<>(x._1._1(), x._1._2()), x._2._1()/x._2._2()));
+        JavaPairRDD<Tuple2<Integer, Integer>, Double> averageTopTime = q3.q3_getAverageForTimeFrame(1, dailyvalue);
 
-        JavaPairRDD<Tuple2<Integer, Integer>, Double> averageDownTime =
-                dailyvalue
-                        .filter(x -> x._1._5() == 0)
-                        .mapToPair(x -> new Tuple2<>(new Tuple2<>(x._1._1(), x._1._2()), new Tuple2<>(x._2, 1)))
-                        .reduceByKey((x, y) -> new Tuple2<>(x._1 + y._1, x._2 + y._2))
-                        .mapToPair(x -> new Tuple2<>(new Tuple2<>(x._1._1, x._1._2), x._2._1/x._2._2));
+        JavaPairRDD<Tuple2<Integer, Integer>, Double> averageDownTime = q3.q3_getAverageForTimeFrame(0, dailyvalue);
 
-        JavaPairRDD<Tuple2<Integer, Integer>, Double> sorting =
-                averageTopTime
-                        .join(averageDownTime)
-                        .mapToPair(x -> new Tuple2<>(x._2._1 - x._2._2, x._1)) //value first
-                        .sortByKey()
-                        .mapToPair(x -> new Tuple2<>(new Tuple2<>(x._2._1, x._2._2), x._1));
+        JavaPairRDD<Tuple2<Integer, Integer>, Double> sorting = q3.q3_sortData(averageDownTime, averageTopTime);
 
         sorting.saveAsTextFile(OUTPUT_DIRECTORY + "/query3");
 
-        TimeClass_test.getInstance().stop(OUTPUT_DIRECTORY + "/query3results.csv");
-
+        TimeClass.getInstance().stop();
 
 
     }
@@ -244,21 +194,5 @@ public class StructureHouses_test {
             }
         }
         return true;
-    }
-
-    private static Tuple2<Tuple5<Integer, Integer, Integer, Integer, Integer>, Tuple2<Double, Integer>> calculateDay(SorterClass x) {
-        Calendar c = Calendar.getInstance();
-        c.setTimeInMillis(x.getTimestamp() * 1000);
-        int day_of_week = c.get(Calendar.DAY_OF_WEEK);
-        int day_of_month = c.get(Calendar.DAY_OF_MONTH);
-        int month = c.get(Calendar.MONTH);
-        int year = c.get(Calendar.YEAR);
-        if (x.getTimezone() == 0 ||
-                x.getTimezone() == 3 ||
-                day_of_week == 1 ||
-                day_of_week == 7) //fascia bassa
-            return new Tuple2<>(new Tuple5<>(x.getHouseid(), x.getPlugid(), x.getTimezone(), x.getDay(), 0), new Tuple2<>(x.getValue(), x.getTimestamp()));
-        else
-            return new Tuple2<>(new Tuple5<>(x.getHouseid(), x.getPlugid(), x.getTimezone(), x.getDay(), 1), new Tuple2<>(x.getValue(), x.getTimestamp()));
     }
 }
