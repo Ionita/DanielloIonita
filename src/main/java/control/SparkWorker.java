@@ -28,9 +28,6 @@ public class SparkWorker {
      */
     public void initSparkContext(String appname, String mastername){
         SparkConf conf = new SparkConf().setMaster(mastername).setAppName(appname);
-        conf.set("fs.hdfs.impl", org.apache.hadoop.hdfs.DistributedFileSystem.class.getName());
-        conf.set("fs.file.impl", org.apache.hadoop.fs.LocalFileSystem.class.getName());
-
         sc = new JavaSparkContext(conf);
     }
 

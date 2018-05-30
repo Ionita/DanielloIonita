@@ -39,7 +39,7 @@ public class StructureHouses_test {
         createFileIfItExists(OUTPUT_DIRECTORY + "/query2results.csv");
         createFileIfItExists(OUTPUT_DIRECTORY + "/query3results.csv");
 
-        SparkWorker.getInstance().initSparkContext("SABD", "local");
+        SparkWorker.getInstance().initSparkContext("SABD", "local[*]");
 
         for(int i = 0; i < 50; i++) {
             deleteFileIfItExists(OUTPUT_DIRECTORY + "/query1output");
@@ -253,12 +253,12 @@ public class StructureHouses_test {
         int day_of_month = c.get(Calendar.DAY_OF_MONTH);
         int month = c.get(Calendar.MONTH);
         int year = c.get(Calendar.YEAR);
-        if (x.getTimezone() == 1 ||
-                x.getTimezone() == 2 ||
+        if (x.getTimezone() == 0 ||
+                x.getTimezone() == 3 ||
                 day_of_week == 1 ||
-                day_of_week == 7) //fascia top
-            return new Tuple2<>(new Tuple5<>(x.getHouseid(), x.getPlugid(), x.getTimezone(), x.getDay(), 1), new Tuple2<>(x.getValue(), x.getTimestamp()));
-        else
+                day_of_week == 7) //fascia bassa
             return new Tuple2<>(new Tuple5<>(x.getHouseid(), x.getPlugid(), x.getTimezone(), x.getDay(), 0), new Tuple2<>(x.getValue(), x.getTimestamp()));
+        else
+            return new Tuple2<>(new Tuple5<>(x.getHouseid(), x.getPlugid(), x.getTimezone(), x.getDay(), 1), new Tuple2<>(x.getValue(), x.getTimestamp()));
     }
 }
