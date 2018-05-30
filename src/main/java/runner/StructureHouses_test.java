@@ -40,19 +40,19 @@ public class StructureHouses_test {
 
         SparkWorker.getInstance().initSparkContext("SABD", "local[*]");
 
-        for(int i = 0; i < 1; i++) {
-            deleteFileIfItExists(OUTPUT_DIRECTORY + "/query1output");
-            query1();
-        }
+//        for(int i = 0; i < 1; i++) {
+//            deleteFileIfItExists(OUTPUT_DIRECTORY + "/query1output");
+//            query1();
+//        }
 //        for(int i = 0; i < 1; i++) {
 //            deleteFileIfItExists(OUTPUT_DIRECTORY + "/query2mean");
 //            deleteFileIfItExists(OUTPUT_DIRECTORY + "/query2standardDeviation");
 //            query2();
 //        }
-//        for(int i = 0; i < 1; i++) {
-//            deleteFileIfItExists(OUTPUT_DIRECTORY + "/query3");
-//            query3();
-//        }
+        for(int i = 0; i < 1; i++) {
+            deleteFileIfItExists(OUTPUT_DIRECTORY + "/query3");
+            query3();
+        }
 
         SparkWorker.getInstance().closeConnection();
     }

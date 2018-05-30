@@ -27,7 +27,7 @@ public class Query3_functions {
         return averageHigh
                 .join(averageLow)
                 .mapToPair(x -> new Tuple2<>(x._2._1 - x._2._2, x._1)) //value first
-                .sortByKey()
+                .sortByKey(false)
                 .mapToPair(x -> new Tuple2<>(new Tuple2<>(x._2._1, x._2._2), x._1));
     }
 
