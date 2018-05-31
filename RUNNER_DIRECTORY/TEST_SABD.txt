@@ -135,15 +135,4 @@ typing m will let saveResultsOnMongoDB_OSX.sh starts.
 typing n will run saveResultsOnMongoDB_linux.sh
 
 not having MongoDB on our container we decided to run the script independently on the host machine closing the previous terminal (but the result is the same, you just need to have mongoDB installed in your docker container). 
-
-If you run the script on your host machine
-
  
-
-
-
-
- 
-
-
-
