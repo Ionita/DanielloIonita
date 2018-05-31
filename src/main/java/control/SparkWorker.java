@@ -6,9 +6,6 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
 
-import javax.security.auth.login.Configuration;
-import java.util.concurrent.TimeUnit;
-
 public class SparkWorker {
 
     private static SparkWorker instance = new SparkWorker();
@@ -21,8 +18,7 @@ public class SparkWorker {
     }
 
     /**
-     * funzione che configura l'ambiente spark. Scrivere "local[*]" come master dovrebbe ottimizzare
-     * il numero di partizioni MA CONTROLLA perchè non ho capito bene
+     * Function that initializes the spark context
      * @param appname
      * @param mastername
      */
@@ -32,8 +28,7 @@ public class SparkWorker {
     }
 
     /**
-     * funzione che effettua il parsing del file in un oggetto di tipo SorterClass (presente dentro main/java/entities).
-     * Il controllo delle tuple errate è fatto male e andrà sicuramente usata un'altra funzione ad hoc
+     * Function that parses tuples and stores them in SorterClass Objects.
      * @param filepath
      * @return
      */
@@ -54,7 +49,6 @@ public class SparkWorker {
                                     Integer.valueOf(fields[6]));
                         } catch(Exception e){
                             e.printStackTrace();
-                            TimeUnit.SECONDS.sleep(3);
                             sd = new SorterClass( 0, 0,0.0,0, 0, 0, 0);
                         }
                         return sd;
@@ -64,7 +58,7 @@ public class SparkWorker {
     }
 
     /**
-     * funzione che chiude la connessione spark
+     * Function that closes spark connection
      */
     public void closeConnection(){
         sc.close();

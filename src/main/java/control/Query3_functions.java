@@ -19,7 +19,13 @@ public class Query3_functions {
         return instance;
     }
 
-
+    /**
+     * Function that returns the difference between high-end average values and low-end average values and sort them
+     * in descending order
+     * @param averageLow
+     * @param averageHigh
+     * @return
+     */
     public JavaPairRDD<Tuple2<Integer, Integer>, Double> q3_sortData(
             JavaPairRDD<Tuple2<Integer, Integer>, Double>  averageLow,
             JavaPairRDD<Tuple2<Integer, Integer>, Double>  averageHigh)
@@ -31,6 +37,16 @@ public class Query3_functions {
                 .mapToPair(x -> new Tuple2<>(new Tuple2<>(x._2._1, x._2._2), x._1));
     }
 
+    /**
+     * Function that returns the value with smallest timestamp for each
+     *  house
+     *  plug
+     *  timezone
+     *  day
+     *  day_type
+     * @param data
+     * @return
+     */
     public JavaPairRDD<Tuple5<
             Integer/*house_id*/,
             Integer/*plug_id*/,
@@ -51,14 +67,24 @@ public class Query3_functions {
                 .mapToPair(x -> new Tuple2<>(new Tuple5<>(x._1._1(), x._1._2(), x._1._3(), x._1._4(), x._1._5()), x._2._1()));
     }
 
+    /**
+     * Function that returns the value with greatest timestamp for each
+     *  house
+     *  plug
+     *  timezone
+     *  day
+     *  day_type
+     * @param data
+     * @return
+     */
     public JavaPairRDD<Tuple5
             <
-                    Integer/*house_id*/,
-                    Integer/*plug_id*/,
-                    Integer/*timezone*/,
-                    Integer/*day*/,
-                    Integer/*daytype*/
-                    >,
+            Integer/*house_id*/,
+            Integer/*plug_id*/,
+            Integer/*timezone*/,
+            Integer/*day*/,
+            Integer/*daytype*/
+            >,
             Double> q3_getPlugFinalValue(JavaRDD<SorterClass> data)
     {
         return data
@@ -72,45 +98,62 @@ public class Query3_functions {
                 .mapToPair(x -> new Tuple2<>(new Tuple5<>(x._1._1(), x._1._2(), x._1._3(), x._1._4(), x._1._5()), x._2._1()));
     }
 
+    /**
+     * Function that computes the difference between final and starter values for each
+     *  house
+     *  plug
+     *  timezone
+     *  day
+     *  day_type
+     * @param startervalue
+     * @param finalvalue
+     * @return
+     */
     public JavaPairRDD<Tuple5
             <
+            Integer/*house_id*/,
+            Integer/*plug_id*/,
+            Integer/*timezone*/,
+            Integer/*day*/,
+            Integer/*daytype*/
+                >, Double> q3_getDailyValue(
+                    JavaPairRDD<Tuple5
+                    <
                     Integer/*house_id*/,
                     Integer/*plug_id*/,
                     Integer/*timezone*/,
                     Integer/*day*/,
                     Integer/*daytype*/
-                    >, Double> q3_getDailyValue(
-            JavaPairRDD<Tuple5
+                    >, Double> startervalue,
+                    JavaPairRDD<Tuple5
                     <
-                            Integer/*house_id*/,
-                            Integer/*plug_id*/,
-                            Integer/*timezone*/,
-                            Integer/*day*/,
-                            Integer/*daytype*/
-                            >, Double> startervalue,
-            JavaPairRDD<Tuple5
-                    <
-                            Integer/*house_id*/,
-                            Integer/*plug_id*/,
-                            Integer/*timezone*/,
-                            Integer/*day*/,
-                            Integer/*daytype*/
-                            >, Double> finalvalue)
+                    Integer/*house_id*/,
+                    Integer/*plug_id*/,
+                    Integer/*timezone*/,
+                    Integer/*day*/,
+                    Integer/*daytype*/
+                    >, Double> finalvalue)
     {
         return finalvalue.join(startervalue)
                 .mapToPair(x -> new Tuple2<>(new Tuple5<>(x._1._1(), x._1._2(), x._1._3(), x._1._4(), x._1._5()), x._2._1 - x._2._2));
     }
 
+    /**
+     * Function that computes the total power consumption average for each house, plug and timeframe
+     * @param timeframe
+     * @param data
+     * @return
+     */
     public JavaPairRDD<Tuple2<Integer, Integer>, Double> q3_getAverageForTimeFrame(
             int timeframe,
             JavaPairRDD<Tuple5
-                    <
-                            Integer/*house_id*/,
-                            Integer/*plug_id*/,
-                            Integer/*timezone*/,
-                            Integer/*day*/,
-                            Integer/*daytype*/
-                            >, Double> data)
+            <
+            Integer/*house_id*/,
+            Integer/*plug_id*/,
+            Integer/*timezone*/,
+            Integer/*day*/,
+            Integer/*daytype*/
+            >, Double> data)
     {
         return data
                 .filter(x -> x._1._5() == timeframe)
@@ -119,8 +162,11 @@ public class Query3_functions {
                 .mapToPair(x -> new Tuple2<>(new Tuple2<>(x._1._1(), x._1._2()), x._2._1()/x._2._2()));
     }
 
-
-
+    /**
+     * Function that computes if a tuple was taken during the high-end time frame or not
+     * @param x
+     * @return
+     */
     private static Tuple2<Tuple5<Integer, Integer, Integer, Integer, Integer>, Tuple2<Double, Integer>> q3_calculateDay(SorterClass x) {
         Calendar c = Calendar.getInstance();
         c.setTimeInMillis(x.getTimestamp() * 1000);
