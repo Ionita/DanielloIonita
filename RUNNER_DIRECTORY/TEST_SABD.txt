@@ -1,0 +1,150 @@
+In this file we show a complete test. 
+
+On Ubuntu 18.04 LTE:
+
+We have modified Matteo Nardelli's Dockerimage (that can be found on matnar github page) exposing port 8080.
+The new dockerImage is called "newImage"
+with the next code we run the master and three slaves: 
+
+docker network create --driver bridge hadoop_network
+sudo docker run -t -i -p 50075:50075 -d --network=hadoop_network --name=slave1 newImage
+sudo docker run -t -i -p 50076:50075 -d --network=hadoop_network --name=slave2 newImage
+sudo docker run -t -i -p 50077:50075 -d --network=hadoop_network --name=slave3 newImage
+sudo docker run -t -i -v /home/simone/Documents/sharedDirectory:/shared -p 50070:50070 -p 8080:8080 --network=hadoop_network --name=master newImage 
+
+"sharedDirectory" is a shared with the host machine. We put NiFi, Spark binaries, the jar, the scripts and the csv inside it.
+
+we set the following paths
+
+export HADOOP_HOME=/usr/local/hadoop
+export SPARK_HOME=/shared/spark...
+export NIFI_HOME=/shared/nifi..
+
+inside the shared directory we run runner_SABD.sh.
+
+
+
+
+
+ /  ___|/ _ \ | ___ \  _  \        /  | 
+ \  --./ /_\ \| |_/ / | | |  _ __   | | 
+   --. \  _  || ___ \ | | | |  _ \  | | 
+ /\__/ / | | || |_/ / |/ /  | |_) |_| | 
+ \____/\_| |_/\____/|___/   | .__(_)___ 
+                            | |         
+                            |_|         
+ ______ _  ___        _      _ _        
+ |  _  ( )/ _ \      (_)    | | |       
+ | | | |// /_\ \_ __  _  ___| | | ___   
+ | | | | |  _  |  _ \| |/ _ \ | |/ _ \  
+ | |/ /  | | | | | | | |  __/ | | (_) | 
+ |___/   \_| |_/_| |_|_|\___|_|_|\___/  
+                                        
+                                        
+  _____            _ _                  
+ |_   _|          (_) |                 
+   | |  ___  _ __  _| |_ __ _           
+   | | / _ \|  _ \| | __/ _  |          
+  _| || (_) | | | | | || (_| |          
+  \___/\___/|_| |_|_|\__\__,_|          
+                                        
+                                        
+  Welcome!
+  this script can be used to run the first project for the course Systems and Architectures for Big Data at University of Rome Tor Vergata
+  Note that this script is REALLY interactive!
+  Before starting, check if the next path are set in your terminal:
+  $HADOOP_HOME
+  $SPARK_HOME
+  $NIFI_HOME (optional)
+  $MONGO_HOME
+  as you can see this project needs that hadoop, spark and mongoDB are installed on you computer.
+  This script must be in the same directory as the following files:
+  d14_filtered.csv
+  SABDanielloIonita.jar
+  saveOnMongoDB_{os}.sh
+  saveOnHDFS.xml (optional)
+  if you haven't already started frameworks required there's no need to do it now. This script will do it for you.
+
+
+ What path do you want to use for HDFS? 
+ Type m to use master:54310 
+ Type n to use localhost:9000 
+m  							-----> we use hdfs://master:54310/ because we are launching the application inside the docker container
+
+Do you want to start Hadoop? (note that $HADOOP_HOME must be configured) (y/n)
+y							-----> we decided to star hdfs directly fro the script
+starting hadoop
+18/05/31 17:52:30 INFO namenode.NameNode: STARTUP_MSG: 
+/************************************************************
+STARTUP_MSG: Starting NameNode
+STARTUP_MSG:   user = simone
+STARTUP_MSG:   host = simone-HP-Spectre-Notebook/127.0.1.1
+STARTUP_MSG:   args = [-format]
+STARTUP_MSG:   version = 2.8.4
+STARTUP_MSG:   classpath = /usr/local/hadoop/etc/hadoop:
+	.
+	.
+	.
+
+localhost: datanode running as process 22655. Stop it first.
+Starting secondary namenodes [0.0.0.0]
+0.0.0.0: secondarynamenode running as process 22888. Stop it first.
+
+
+Do you want to create directories inputDirectory and outputDirectory on HDFS? (note that $HADOOP_HOME must be configured) (y/n)
+y							------> we create inputDirectory and outputDirectory 
+creating output directory
+creating input directory
+
+
+Before continuing, do you want to inject data with hdfs-put? The alternative is to use apache NIFI (xml in the current directory). The csv must be in the current directory and must be called d14_filtered.csv (y/n)
+n							-------> we want to inject data using NiFi
+
+
+Do you want to start apache NIFI ? note that it may take some time for NiFi to start ($NIFI_HOME must be configured) (y/n)
+y							-------> now we can listen on localhost:8080/nifi
+
+starting nifi
+sudo: /bin/nifi.sh: command not found
+apache Nifi started
+now I'm waiting. Run the template saveOnHDFS.xml on Apache NIFI
+Type a character to continue
+
+_________________________________________________________________________________________
+now we let the terminal wait for a moment and we open a browser on localhost:8080/nifi.
+We can use the template SABD_putHDFS
+let's return to the docker container terminal
+_________________________________________________________________________________________
+
+ok
+Now jar is running computing query results. Wait the computation
+
+time spent 8.34
+
+time spent 6.55
+
+time spent 4.21
+
+now I'm waiting. Run the template retrieveOnHDFS.xml on Apache NIFI
+type a m if you're running from OSX, n if on linux 
+_________________________________________________________________________________________
+
+now we can open NiFi and load the second template SABD_SaveResultsOnLocalStorage.xml
+after running processors we can put files in mongodb.
+ 
+typing m will let saveResultsOnMongoDB_OSX.sh starts.
+typing n will run saveResultsOnMongoDB_linux.sh
+
+not having MongoDB on our container we decided to run the script independently on the host machine closing the previous terminal (but the result is the same, you just need to have mongoDB installed in your docker container). 
+
+If you run the script on your host machine
+
+ 
+
+
+
+
+ 
+
+
+
